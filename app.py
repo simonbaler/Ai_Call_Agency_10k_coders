@@ -1,4 +1,5 @@
-from flask import Flask, request, render_template, jsonify, session, redirect, url_for
+from flask import Flask, request, render_template, jsonify, session, redirect, url_for, Response
+from werkzeug.exceptions import HTTPException
 from twilio.twiml.voice_response import VoiceResponse, Gather
 from dotenv import load_dotenv
 import os
@@ -197,6 +198,8 @@ def meeting_message(booking):
     return messages.get(language, f"Dear {booking.get('student_name', 'Student')}, your {course} mentor meeting with 10,000 Coders is confirmed. Date: {day}. Time: {time}. Our mentor-led, project-based programs cover AI, Full Stack development, and placement preparation. Please join on time. We look forward to welcoming you.")
 @app.errorhandler(Exception)
 def voice_safe_error(error):
+    if isinstance(error, HTTPException):
+        return error
     app.logger.exception("Unhandled request error: %s", error)
     if request.path in ("/voice", "/process"):
         response = VoiceResponse()
@@ -206,6 +209,11 @@ def voice_safe_error(error):
     if request.path.startswith("/") and request.accept_mimetypes.best == "application/json":
         return jsonify({"error": "The request could not be completed"}), 500
     return "The request could not be completed", 500
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return Response(status=204)
 
 
 def customer_from_payload(payload):
